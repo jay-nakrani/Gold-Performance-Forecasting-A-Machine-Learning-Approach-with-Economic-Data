@@ -10,7 +10,7 @@ Original file is located at
 
 # Step-1 : *Data collection, analysis and cleaning.*
 """
-
+# On monthly data.
 # To install required packages and import libraries.
 import yfinance as yf
 import pandas as pd
