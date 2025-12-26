@@ -1215,7 +1215,7 @@ def analyze_and_compare_models(df):
     print("-" * 135)
     print(comparison_df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
     
-    # Identify the best model
+    # To get the first best model.
     best_model_name = comparison_df.iloc[0]['Model']
     best_model_data = results_dict[best_model_name]
     
@@ -1223,5 +1223,171 @@ def analyze_and_compare_models(df):
        
     return best_model_name, best_model_data, comparison_df
 
-# Analyze your results
+# To analyze the results.
 best_model_name, best_model_data, comparison_df = analyze_and_compare_models(results_dict)
+
+def create_summary_chart(df):
+
+    """
+    This function helps to create a summary chart for model evaluation.
+
+    Parameters: df : DataFrame with detailed comparison.
+    Returns: fig : Matplotlib figure object.
+    """
+
+    # To create two subplots, one for model's performance acoording to different
+    # metrics and other for model's traning-validation and training-testing gap.
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
+    
+    # To define the metrics to plot (first subplot).
+    metrics = ['Test Accuracy', 'Balanced Accuracy', 'F1 Score', 'Precision', 'Recall']
+    model_names = df['Model'].values
+    x = np.arange(len(model_names))
+    width = 0.15
+    
+    # To assign colors for each metric.
+    colors = ['blue', 'green', 'red', 'orange', 'purple']
+    
+    for i, (metric, color) in enumerate(zip(metrics, colors)):
+        offset = (i - 2) * width
+        values = df[metric].values
+        bars = ax1.bar(x + offset, values, width, label=metric, color=color)
+        
+        # To add value labels on top of each bar.
+        for bar, value in zip(bars, values):
+            height = bar.get_height()
+            ax1.text(bar.get_x() + bar.get_width()/2., height + 0.01,
+                    f'{value:.3f}', ha='center', va='bottom', fontsize=8)
+    
+    # To configure the first subplot.
+    ax1.set_ylabel('Score', fontsize=12)
+    ax1.set_title('(a) Model Performance Metrics', fontsize=13, fontweight='bold')
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(model_names, rotation=0, fontsize=11)
+    ax1.set_ylim(0, 1)
+    ax1.grid(True, axis='y', alpha=0.3)
+    
+    # To create the second subplot for overfitting analysis.
+    gap_data = [df['Overfitting Gap'].values,
+                df['CV Train-Val Gap'].values]
+    gap_labels = ['Test-Train Gap', 'CV Train-Val Gap']
+    gap_colors = ['red', 'blue']
+    
+    x2 = np.arange(len(model_names))
+    for i, (data, label, color) in enumerate(zip(gap_data, gap_labels, gap_colors)):
+        ax2.bar(x2 + i*0.3, data, width=0.3, label=label, alpha=0.7, color=color)
+    
+    # To add a horizontal line at zero for reference.
+    ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
+    ax2.set_ylabel('Gap Value', fontsize=12)
+    ax2.set_title('(b) Model Generalization Analysis', fontsize=13, fontweight='bold')
+    ax2.set_xticks(x2 + 0.15)
+    ax2.set_xticklabels(model_names, rotation=0, fontsize=11)
+    ax2.grid(True, axis='y', alpha=0.3)
+    
+    # To create one comprehensive legend at the top of the figure.
+    # To get all legend items from both subplots.
+    handles1, labels1 = ax1.get_legend_handles_labels()
+    handles2, labels2 = ax2.get_legend_handles_labels()
+    
+    # To combine all handles and labels.
+    all_handles = handles1 + handles2
+    all_labels = labels1 + labels2
+    
+    # To create single legend at the very top of the figure.
+    fig.legend(all_handles, all_labels,
+               loc='lower center',
+               ncol=len(all_labels),
+               bbox_to_anchor=(0.5, -0.05),
+               fontsize=10,
+               frameon=True,
+               fancybox=True,
+               shadow=False)
+    
+    # To add main title below the legend.
+    plt.suptitle('Gold Price Weekly Direction Forecasting: Model Evaluation', 
+                 fontsize=16, fontweight='bold', y=1.02)
+    
+    plt.tight_layout()
+    
+    # To adjust layout to make room for the top legend.
+    plt.subplots_adjust(bottom=0.1)
+    
+    return fig
+
+# Call the function:
+fig = create_summary_chart(comparison_df)
+plt.show()
+
+def plot_feature_importance_simple(df, features):
+
+    """
+    This function helps to compare feature importance across all three models.
+    Shows only importance scores without direction information.
+
+    Parameters: df : Dataframe containing model results.
+                features : List of feature names.
+    Returns: fig : Matplotlib figure object.
+    """
+
+    # To create a figure with three subplots, one for each model.
+    fig, axes = plt.subplots(3, 1, figsize=(14, 16))
+    fig.suptitle('Top 10 Most Important Features for Each Model\n(Gold Price Weekly Direction Prediction)', 
+                 fontsize=16, fontweight='bold', y=1.02)
+    
+    # To define which models to plot.
+    models_to_plot = ['Logistic Regression', 'Ridge Classifier', 'Random Forest']
+    
+    # To use the same color for all bars (makes comparison easier).
+    bar_color = 'steelblue'
+    
+    # To iterate through each model and create its feature importance plot.
+    for idx, model_name in enumerate(models_to_plot):
+        ax = axes[idx]
+        
+        # To check if the model exists in the results dictionary.
+        if model_name in df:
+            model_data = df[model_name]['results']
+            
+            # To check if feature importance data is available for this model.
+            if 'feature_importance' in model_data and model_data['feature_importance'] is not None:
+                feat_imp = model_data['feature_importance']
+                
+                # To extract top 10 most important features.
+                top_features = feat_imp.head(10).copy()
+                
+                # To get importance values.
+                # For linear models, use absolute coefficient values.
+                if 'Abs_Coefficient' in feat_imp.columns:
+                    importance_values = top_features['Abs_Coefficient'].values
+                    score_type = 'Absolute Coefficient'
+                else:
+                    # For Random Forest, use importance scores.
+                    importance_values = top_features['Importance'].values
+                    score_type = 'Importance Score'
+                
+                # To create horizontal bars.
+                bars = ax.barh(range(len(top_features)), 
+                              importance_values,
+                              color=bar_color, alpha=0.8)
+                                
+                # To configure the y-axis with feature names.
+                ax.set_yticks(range(len(top_features)))
+                ax.set_yticklabels(top_features['Feature'].tolist(), fontsize=10)
+                ax.invert_yaxis()  # To display highest importance at the top.
+                
+                # To set x-axis label.
+                ax.set_xlabel(score_type, fontsize=11)
+                
+                # To add title for this subplot.
+                ax.set_title(f'{model_name}', fontsize=13, fontweight='bold', pad=10)
+                
+                # To add grid lines for better readability.
+                ax.grid(True, axis='x', alpha=0.3, linestyle='--')
+    
+    plt.tight_layout()
+    return fig
+
+# To call the function after model training.
+fig = plot_feature_importance_simple(results_dict, friday_features)
+plt.show()
