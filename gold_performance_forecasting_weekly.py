@@ -1174,3 +1174,54 @@ rf_model, rf_cv, rf_results = tune_random_forest(X_train, y_train, X_test, y_tes
 results_dict['Random Forest'] = {'model': rf_model,
                                  'cv_scores': rf_cv,
                                  'results': rf_results}
+
+# Step-4 : *Analysis.*
+
+def analyze_and_compare_models(df):
+
+    """
+    This function helps to analyze and compare the performance of all trained models.
+    
+    Parameters: df : Dictionary containing model results.
+    Returns: best_model_name : Name of the best performing model.
+             best_model_data : Data for the best model.
+             comparison_df : DataFrame with detailed comparison.
+    """
+    
+    # To extract performance metrics.
+    comparison_data = []
+    
+    for model_name, model_data in df.items():
+        results = model_data['results']
+        cv_scores = model_data['cv_scores']
+        
+        comparison_data.append({'Model': model_name,
+                                'Test Accuracy': results['test_acc'],
+                                'CV Val Accuracy': cv_scores['val_acc'],
+                                'Balanced Accuracy': results['balanced_acc'],
+                                'F1 Score': results['f1'],
+                                'Precision': results['precision'],
+                                'Recall': results['recall'],
+                                'Overfitting Gap': results['gap'],
+                                'CV Train-Val Gap': cv_scores['gap']})
+    
+    # To create comparison dataframe.
+    comparison_df = pd.DataFrame(comparison_data)
+    
+    # To sort the dataframe by balanced accuracy.
+    comparison_df = comparison_df.sort_values('Balanced Accuracy', ascending=False)
+    
+    print(f"\nMODEL COMPARISON (Sorted by Balanced Accuracy):")
+    print("-" * 135)
+    print(comparison_df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
+    
+    # Identify the best model
+    best_model_name = comparison_df.iloc[0]['Model']
+    best_model_data = results_dict[best_model_name]
+    
+    print(f"\nBEST MODEL: {best_model_name}")
+       
+    return best_model_name, best_model_data, comparison_df
+
+# Analyze your results
+best_model_name, best_model_data, comparison_df = analyze_and_compare_models(results_dict)
