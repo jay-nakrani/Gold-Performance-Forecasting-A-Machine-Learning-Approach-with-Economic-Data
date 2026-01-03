@@ -1319,7 +1319,7 @@ def create_summary_chart(df):
 fig = create_summary_chart(comparison_df)
 plt.show()
 
-def plot_feature_importance_simple(df, features):
+def plot_feature_importance(df, features):
 
     """
     This function helps to compare feature importance across all three models.
@@ -1389,5 +1389,5 @@ def plot_feature_importance_simple(df, features):
     return fig
 
 # To call the function after model training.
-fig = plot_feature_importance_simple(results_dict, friday_features)
+fig = plot_feature_importance(results_dict, friday_features)
 plt.show()
