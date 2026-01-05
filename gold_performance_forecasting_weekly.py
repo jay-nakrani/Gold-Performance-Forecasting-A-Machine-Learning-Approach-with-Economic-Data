@@ -12,6 +12,7 @@ Original file is located at
 """
 
 # To install required packages and import libraries.
+
 import yfinance as yf
 import pandas as pd
 import numpy as np
@@ -20,10 +21,11 @@ import seaborn as sns
 from datetime import datetime
 
 # Function to get the data.
-def get_data(start='2000-01-01'):
+
+def get_data(start):
+
     """
-    To download all the required data from Yahoo finance using yfinance-
-    library.(From 2000 to Today)
+    To download all the required data from Yahoo finance using yfinance-library.(From 2000 to Today)
 
     parameters: start= start date of data.
 
@@ -32,18 +34,19 @@ def get_data(start='2000-01-01'):
 
     # To download all the required data from Yahoo finance using yfinance-
     # library.(From 2000 to Today)
+
     # Gold futures.
-    gold = yf.download('GC=F', start=start, progress=False)
+    gold = yf.download('GC=F', start=start, auto_adjust=True, progress=False)
     # Treasury yield.(thirty years treasury yield)
-    treasury_yield = yf.download('^TYX', start=start, progress=False)
+    treasury_yield = yf.download('^TYX', start=start, auto_adjust=True, progress=False)
     # USD Index.
-    usd_index = yf.download('DX=F', start=start, progress=False)
+    usd_index = yf.download('DX=F', start=start, auto_adjust=True, progress=False)
     # Volatility Index (VIX).
-    vix = yf.download('^VIX', start=start, progress=False)
-    # US oil futures.
-    oil = yf.download('CL=F', start=start, auto_adjust=True)
+    vix = yf.download('^VIX', start=start, auto_adjust=True, progress=False)
+    # Oil futures.
+    oil = yf.download('CL=F', start=start, auto_adjust=True, progress=False)
     # Silver futures.
-    silver = yf.download('SI=F', start=start, progress=False)
+    silver = yf.download('SI=F', start=start, auto_adjust=True, progress=False)
 
     # To download inflation data (CPI) from federal reserve economic data (FRED).
     cpi_url = "https://fred.stlouisfed.org/graph/fredgraph.csv?id=CPIAUCSL"
@@ -67,40 +70,36 @@ def get_data(start='2000-01-01'):
     # For example: march,2024-march,2025; april,2024- april,2025 etc..
     cpi_data['Inflation_Annual'] = cpi_data['CPI'].pct_change(12) * 100  # Year-over-year
 
-    # To keep CPI data from 2000-01-01 onwards for analysis as all other data is from
+    # To keep CPI data from 2000 onwards for analysis as all other data is from
     # year 2000.
     cpi_data_final = cpi_data[cpi_data.index >= start]
 
     # Resample to daily frequency with forward fill.
     inflation_annual_daily = cpi_data_final['Inflation_Annual'].resample('D').ffill()
 
-    return {
-        'gold': gold,
-        'treasury_yield': treasury_yield,
-        'usd_index': usd_index,
-        'vix': vix,
-        'oil': oil,
-        'silver': silver,
-        'inflation_annual': inflation_annual_daily
-    }
+    return {'gold': gold,
+            'treasury_yield': treasury_yield,
+            'usd_index': usd_index,
+            'vix': vix,
+            'oil': oil,
+            'silver': silver,
+            'inflation_annual': inflation_annual_daily}
 
 dataframe = get_data(start='2000-01-01')
 
 # To check each downloaded data.
-datasets_to_check = {
-    'Gold': dataframe['gold'],
-    'Treasury_yield': dataframe['treasury_yield'],
-    'USD Index': dataframe['usd_index'],
-    'VIX': dataframe['vix'],
-    'US Oil': dataframe['oil'],
-    'Silver': dataframe['silver'],
-    'Inflation Annual Daily': dataframe['inflation_annual']
-}
+datasets_to_check = {'Gold': dataframe['gold'],
+                     'Treasury_yield': dataframe['treasury_yield'],
+                     'USD Index': dataframe['usd_index'],
+                     'VIX': dataframe['vix'],
+                     'US Oil': dataframe['oil'],
+                     'Silver': dataframe['silver'],
+                     'Inflation Annual Daily': dataframe['inflation_annual']}
 
 for name, data in datasets_to_check.items():
-    print(f"\n=== {name.upper()} ===")
+    print(f"\n=== {name.upper()} ===\n")
     print(f"Shape: {data.shape}")
-    print(f"Date Range: {data.index[0]} to {data.index[-1]}")
+    print(f"Date range: {data.index[0]} to {data.index[-1]}")
     print("\nFirst 3 rows:\n")
     print(data.tail(3))
     print("\nData types:\n")
@@ -111,13 +110,13 @@ for name, data in datasets_to_check.items():
     print("-" * 50)
 
 # To check if all the data is in same range or not.
-print("\nDATE RANGE COMPARISON")
+print("\nDate range comparison")
 print("=" * 50)
 
 for name, data in datasets_to_check.items():
 
     # String representation used to avoid errors.
-    start_date = str(data.index[0])[:10]  # Get first 10 characters (YYYY-MM-DD)
+    start_date = str(data.index[0])[:10]
     end_date = str(data.index[-1])[:10]
 
     print(f"{name:25} | {start_date} to {end_date} | {len(data):6} records")
@@ -132,15 +131,12 @@ def combine_market_data(data):
 
     Parameters: data (dict): A dictionary containing different market datasets.
 
-    Returns: combined_data (pandas.DataFrame): A combined dataset with all-
-             features aligned to daily frequency.
-
+    Returns: combined_data : A combined dataset with all-features aligned to
+    daily frequency.
     """
+
     # Now we can combine all the datasets into one dataset. we require only close
     # price from each day for further analysis.
-
-    # create a copy to avoid modifying original dataframe.
-    data = data.copy()
 
     # To initialize combined dataframe.
     combined_data = pd.DataFrame()
@@ -161,9 +157,8 @@ def combine_market_data(data):
     # So here we will forward fill it till last date of gold dataset.
     target_end = data['gold'].index[-1]
 
-    inflation_annual_extended = data['inflation_annual'].reindex(
-        pd.date_range(start=data['inflation_annual'].index[0], end=target_end, freq='D')
-        ).ffill()
+    inflation_annual_extended = data['inflation_annual'].reindex(pd.date_range(start=data['inflation_annual'].index[0],
+                                                                               end=target_end, freq='D')).ffill()
 
     # Inflation annual has only one value in dataset so we do not need to
     # extract close price from it.
@@ -183,10 +178,13 @@ print("=" * 40 + "\n")
 print(combined_df.info())
 print("\nMissing values:")
 print(combined_df.isnull().sum())
-print("\nBasic statistics:")
-print(combined_df.describe())
 
 """# Step-2 : *Data visualization.*"""
+
+def save_plot(name):
+    plt.tight_layout()
+    plt.savefig(f"{name}.png", dpi=300)
+    plt.show()
 
 # Function to plot all the features collected in combined dataframe.
 
@@ -195,8 +193,8 @@ def plot_combined_data(combined_df):
     """
     This function helps to plot all the features fromk the dataframe.
 
-    Parameters: combined_df: A combined dataset with all-
-                features aligned to daily frequency.
+    Parameters: combined_df: A combined dataset with all-features aligned to
+                daily frequency.
 
     Returns: None
     """
@@ -206,19 +204,17 @@ def plot_combined_data(combined_df):
 
     # To initialize subplots.
     fig, axes = plt.subplots(4, 2, figsize=(20,30)) # 4 rows, 2 columns, total 8 subplots.
-    fig.suptitle('All features from combined dataset\n', fontsize=24, fontweight='bold')
+    fig.suptitle('All features trend from combined dataset\n', fontsize=24, fontweight='bold')
     axes = axes.flatten() # To create 1D array to iterate through subplots easily.
 
     # To define plot configurations for each variable.
-    plot_config = {
-        'Gold_Price': {'color': 'gold', 'title': 'Gold Price', 'ylabel': 'Price ($)'},
-        'SILVER': {'color': 'darkgray', 'title': 'Silver Price', 'ylabel': 'Price ($)'},
-        'OIL': {'color': 'black', 'title': 'Oil Price', 'ylabel': 'Price ($)'},
-        'Treasury_yield': {'color': 'red', 'title': 'Treasury Yield', 'ylabel': 'Yield (%)'},
-        'USD_Index': {'color': 'green', 'title': 'USD Index', 'ylabel': 'Index Value'},
-        'VIX': {'color': 'purple', 'title': 'VIX (Volatility)', 'ylabel': 'VIX Level'},
-        'Inflation_Annual': {'color': 'blue', 'title': 'Annual Inflation', 'ylabel': 'Inflation (%)'}
-    }
+    plot_config = {'Gold_Price': {'color': 'gold', 'title': 'Gold Price', 'ylabel': 'Price ($)'},
+                   'SILVER': {'color': 'darkgray', 'title': 'Silver Price', 'ylabel': 'Price ($)'},
+                   'OIL': {'color': 'black', 'title': 'Oil Price', 'ylabel': 'Price ($)'},
+                   'Treasury_yield': {'color': 'red', 'title': 'Treasury Yield', 'ylabel': 'Yield (%)'},
+                   'USD_Index': {'color': 'green', 'title': 'USD Index', 'ylabel': 'Index Value'},
+                   'VIX': {'color': 'purple', 'title': 'VIX (Volatility)', 'ylabel': 'VIX Level'},
+                   'Inflation_Annual': {'color': 'blue', 'title': 'Annual Inflation', 'ylabel': 'Inflation (%)'}}
 
     # To plot subplots for each variables.
     for i, column in enumerate(available_columns):
@@ -234,7 +230,6 @@ def plot_combined_data(combined_df):
     # To hide unused subplot.
     for i in range(len(available_columns), len(axes)):
         axes[i].set_visible(False)
-
     plt.tight_layout()
     plt.show()
 
@@ -249,6 +244,8 @@ def plot_gold_inflation_correlation(df):
     and Inflation Annual.
 
     Parameters: df = dataframe.
+
+    Returns: None
     """
 
     # To calculate 1-year rolling correlation between gold and inflation.
@@ -285,7 +282,7 @@ def plot_gold_vs_inflation(df):
 
     Parameters: df = Combined dataset with financial variables
 
-    Returns: high_inflation_periods = DataFrame containing high inflation periods
+    Returns: None
     """
 
     high_inflation_threshold = df['Inflation_Annual'].quantile(0.70)
@@ -294,8 +291,8 @@ def plot_gold_vs_inflation(df):
     plt.figure(figsize=(12, 6))
     plt.plot(df.index, df['Gold_Price'], color='darkgray', label='Gold_price')
     scatter = plt.scatter(high_inflation_periods.index, high_inflation_periods['Gold_Price'],
-                         c=high_inflation_periods['Inflation_Annual'], cmap='plasma_r',
-                         s=20, alpha=0.7, label='High Inflation Periods')
+                          c=high_inflation_periods['Inflation_Annual'], cmap='plasma_r',
+                          s=20, alpha=0.7, label='High Inflation Periods')
 
     # To set the colorbar to threshold.
     vmin = high_inflation_threshold
@@ -314,9 +311,7 @@ def plot_gold_vs_inflation(df):
     plt.xticks(pd.date_range(start=df.index.min(), end=df.index.max(), freq='4YS'))
     plt.show()
 
-    return high_inflation_periods
-
-high_inflation_periods = plot_gold_vs_inflation(combined_df)
+plot_gold_vs_inflation(combined_df)
 
 # Function to plot correlation heatmap.
 
@@ -328,6 +323,7 @@ def plot_correlation_heatmap(df, figsize):
     Parameters: df = dataframe.
                 figsize = tuple, Figure size for the heatmap.
 
+    Returns: None
     """
 
     # To calculate correlation matrix of the dataframe.
@@ -348,9 +344,9 @@ def plot_correlation_heatmap(df, figsize):
 
 corr_matrix = plot_correlation_heatmap(combined_df,(10,8))
 
-# To check the correlation of all the features with gold.
-print("\ncorrelation with gold")
-print("=" * 35)
+# To check the correlation of all the features with gold in percentage change.
+print("\ncorrelation of features with gold (daily percentage change)")
+print("=" * 60)
 daily_c = combined_df.pct_change().dropna()
 correlations = daily_c.corr()['Gold_Price'].sort_values(ascending=False)
 print(correlations)
@@ -379,7 +375,7 @@ def plot_correlation_heatmap(df, figsize):
     sns.heatmap(corr_matrix, mask=mask, annot=True, cmap='coolwarm', center=0,
                 fmt='.3f')
 
-    plt.title('Correlation matrix', fontsize=18, fontweight='bold')
+    plt.title('Correlation matrix (daily percentage change)', fontsize=18, fontweight='bold')
     plt.tight_layout()
     plt.show()
 
@@ -394,18 +390,14 @@ on weekly basis.
 
 # To install required packages and import libraries.
 
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.linear_model import RidgeClassifier
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit, RandomizedSearchCV
+from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
 from sklearn.metrics import (accuracy_score, precision_score, recall_score,
                              f1_score, confusion_matrix,
                              balanced_accuracy_score)
-from sklearn.feature_selection import SelectKBest, f_classif
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -415,11 +407,10 @@ def create_features(df):
 
     """
     This function helps to create weekly prediction features from daily data.
-    Features are created using only data available up to each Friday.
 
-    Parameters: df = Combined dataset with financial variables
+    Parameters: df = Combined dataset with financial variables.
 
-    Returns: data = DataFrame with weekly prediction features
+    Returns: data = DataFrame with weekly prediction features.
     """
 
     # To make a copy of the orignal dataframe to avoid modifying it.
@@ -535,7 +526,7 @@ def filter_to_fridays(df):
 
 friday_features = filter_to_fridays(features_df)
 
-def prepare_training_data(friday_df):
+def prepare_training_data(df):
 
     """
     This function helps to prepare the data for training.
@@ -547,11 +538,11 @@ def prepare_training_data(friday_df):
 
     # To exclude the raw prices and next week's direction to avoid data leakage.
     exclude_cols = ['Gold_Price', 'SILVER', 'OIL', 'USD_Index', 'VIX',
-                   'Treasury_yield', 'Inflation_Annual', 'Target_Next_Week_Up']
-    feature_cols = [col for col in friday_df.columns if col not in exclude_cols]
+                    'Treasury_yield', 'Inflation_Annual', 'Target_Next_Week_Up']
+    feature_cols = [col for col in df.columns if col not in exclude_cols]
 
-    X = friday_df[feature_cols]
-    y = friday_df['Target_Next_Week_Up']
+    X = df[feature_cols]
+    y = df['Target_Next_Week_Up']
 
     print(f"Prepared training data:\n")
     print(f"X shape: {X.shape}")
@@ -633,7 +624,7 @@ X_train_scaled, X_test_scaled, scaler = scale_features(X_train, X_test)
 
 """**Training and testing models**"""
 
-def perform_time_series_cv(model, X_train, y_train, model_name="Model", n_splits=5):
+def perform_time_series_cv(model, X_train, y_train, model_name, n_splits):
 
     """
     This function performs time series cross-validation for any model and returns
@@ -648,7 +639,7 @@ def perform_time_series_cv(model, X_train, y_train, model_name="Model", n_splits
     Returns: cv_scores : Dictionary with cross-validation metrics.
 
     """
-    print(f"\n Performing {n_splits}-fold Time Series Cross-Validation for {model_name}:")
+    print(f"\nPerforming {n_splits}-fold Time Series Cross-Validation for {model_name}:")
 
     # To configure time series cross-validation.
     tscv = TimeSeriesSplit(n_splits=n_splits)
@@ -693,8 +684,8 @@ def perform_time_series_cv(model, X_train, y_train, model_name="Model", n_splits
         cv_precisions.append(precision)
         cv_recalls.append(recall)
 
-        print(f"   Fold {fold}/{n_splits}: Train={train_acc:.4f}, Val={val_acc:.4f}, "
-                  f"BalAcc={bal_acc:.4f}, F1={f1:.4f}")
+        print(f"Fold {fold}/{n_splits}: Train={train_acc:.4f}, Val={val_acc:.4f}, "
+              f"BalAcc={bal_acc:.4f}, F1={f1:.4f}")
 
     # To calculate mean performance across all folds.
     mean_train = np.mean(cv_train_accs)
@@ -707,38 +698,36 @@ def perform_time_series_cv(model, X_train, y_train, model_name="Model", n_splits
     gap = mean_train - mean_val
 
     # To print cross-validation summary results.
-    print("\n Cross-Validation Summary:")
-    print(f"    Mean Train Accuracy:     {mean_train:.4f}")
-    print(f"    Mean Val Accuracy:       {mean_val:.4f} (±{std_val:.4f})")
-    print(f"    Mean Balanced Accuracy:  {mean_bal:.4f}")
-    print(f"    Mean F1 Score:           {mean_f1:.4f}")
-    print(f"    Mean Precision:          {mean_precision:.4f}")
-    print(f"    Mean Recall:             {mean_recall:.4f}")
-    print(f"    Train-Val Gap:           {gap:.4f}", end=" ")
+    print("\nCross-Validation Summary:")
+    print(f"Mean Train Accuracy:    {mean_train:.4f}")
+    print(f"Mean Val Accuracy:      {mean_val:.4f} (±{std_val:.4f})")
+    print(f"Mean Balanced Accuracy: {mean_bal:.4f}")
+    print(f"Mean F1 Score:          {mean_f1:.4f}")
+    print(f"Mean Precision:         {mean_precision:.4f}")
+    print(f"Mean Recall:            {mean_recall:.4f}")
+    print(f"Train-Val Gap:          {gap:.4f}", end=" ")
 
     # To provide interpretation of overfitting gap.
     if gap < 0.05:
-        print(" Excellent generalization!")
+        print("Excellent generalization!")
     elif gap < 0.15:
-        print(" Good generalization")
+        print("Good generalization")
     else:
-        print(" Overfitting detected")
+        print("Overfitting detected")
 
     # To store cross-validation scores in dictionary.
-    cv_scores = {
-        'train_acc': mean_train,
-        'val_acc': mean_val,
-        'balanced_acc': mean_bal,
-        'f1': mean_f1,
-        'precision': mean_precision,
-        'recall': mean_recall,
-        'std': std_val,
-        'gap': gap
-    }
+    cv_scores = {'train_acc': mean_train,
+                 'val_acc': mean_val,
+                 'balanced_acc': mean_bal,
+                 'f1': mean_f1,
+                 'precision': mean_precision,
+                 'recall': mean_recall,
+                 'std': std_val,
+                 'gap': gap}
 
     return cv_scores
 
-def evaluate_model_generic(model, X_train, X_test, y_train, y_test, model_name="Model"):
+def evaluate_model_generic(model, X_train, X_test, y_train, y_test, model_name):
 
     """
     This function provides generic evaluation for any model.
@@ -768,75 +757,70 @@ def evaluate_model_generic(model, X_train, X_test, y_train, y_test, model_name="
     f1 = f1_score(y_test, y_test_pred, zero_division=0)
 
     # To print the calculated performance metrics.
-    print("\n Performance Metrics:")
-    print(f"    Training Accuracy:       {train_acc:.4f}")
-    print(f"    Test Accuracy:           {test_acc:.4f}")
-    print(f"    Balanced Accuracy:       {test_bal_acc:.4f}")
-    print(f"    Precision:               {precision:.4f}")
-    print(f"    Recall:                  {recall:.4f}")
-    print(f"    F1 Score:                {f1:.4f}")
+    print("\nPerformance Metrics:")
+    print(f"Training Accuracy: {train_acc:.4f}")
+    print(f"Test Accuracy:     {test_acc:.4f}")
+    print(f"Balanced Accuracy: {test_bal_acc:.4f}")
+    print(f"Precision:         {precision:.4f}")
+    print(f"Recall:            {recall:.4f}")
+    print(f"F1 Score:          {f1:.4f}")
 
     # To check for overfitting by comparing training and test accuracy.
     gap = train_acc - test_acc
-    print("\n Generalization Analysis:")
-    print(f"   Train-Test Gap:          {gap:+.4f}", end=" ")
+    print("\nGeneralization Analysis:")
+    print(f"Train-Test Gap:    {gap:+.4f}", end=" ")
 
     # To provide interpretation of the overfitting gap.
     if gap < 0.05:
-        print(" Excellent generalization!")
+        print("Excellent generalization!")
     elif gap < 0.15:
-        print(" Good generalization")
+        print("Good generalization")
     else:
-        print(" Overfitting detected")
+        print("Overfitting detected")
 
     # To create and display the confusion matrix.
     cm = confusion_matrix(y_test, y_test_pred)
     print("\n Confusion Matrix:")
-    print("                     Predicted Down  Predicted Up")
-    print(f"      Actual Down         {cm[0,0]:4d}          {cm[0,1]:4d}")
-    print(f"      Actual Up           {cm[1,0]:4d}          {cm[1,1]:4d}")
+    print("             Predicted Down Predicted Up")
+    print(f"Actual Down     {cm[0,0]:4d}          {cm[0,1]:4d}")
+    print(f"Actual Up       {cm[1,0]:4d}          {cm[1,1]:4d}")
 
     # To calculate per-class accuracy for detailed analysis.
-    print("\n Per-Class Performance:")
+    print("\nPer-Class Performance:")
     down_total = cm[0,0] + cm[0,1]
     up_total = cm[1,0] + cm[1,1]
 
     # To calculate accuracy for down weeks.
     if down_total > 0:
         down_acc = cm[0,0] / down_total
-        print(f"    Down weeks:  {cm[0,0]:3d}/{down_total:3d} correct ({down_acc:.1%})")
+        print(f"Down weeks:  {cm[0,0]:3d}/{down_total:3d} correct ({down_acc:.1%})")
 
     # To calculate accuracy for up weeks.
     if up_total > 0:
         up_acc = cm[1,1] / up_total
-        print(f"    Up weeks:    {cm[1,1]:3d}/{up_total:3d} correct ({up_acc:.1%})")
+        print(f"Up weeks:    {cm[1,1]:3d}/{up_total:3d} correct ({up_acc:.1%})")
 
     # Try to get feature importance if available
     feature_importance = None
     if hasattr(model, 'feature_importances_'):
-        feature_importance = pd.DataFrame({
-            'Feature': X_train.columns,
-            'Importance': model.feature_importances_
-        }).sort_values('Importance', ascending=False)
+        feature_importance = pd.DataFrame({'Feature': X_train.columns,
+                                           'Importance': model.feature_importances_}).sort_values('Importance', ascending=False)
     elif hasattr(model, 'coef_'):
         # For linear models
-        feature_importance = pd.DataFrame({
-            'Feature': X_train.columns,
-            'Coefficient': model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_,
-            'Abs_Coefficient': abs(model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_)
-        }).sort_values('Abs_Coefficient', ascending=False)
+        feature_importance = pd.DataFrame({'Feature': X_train.columns,
+                                           'Coefficient': model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_,
+                                           'Abs_Coefficient': abs(model.coef_[0] if len(model.coef_.shape) > 1 else model.coef_)}).sort_values('Abs_Coefficient', ascending=False)
 
     # To store all results in a dictionary for further use.
-    results = {
-        'train_acc': train_acc,
-        'test_acc': test_acc,
-        'balanced_acc': test_bal_acc,
-        'precision': precision,
-        'recall': recall,
-        'f1': f1,
-        'gap': gap,
-        'confusion_matrix': cm,
-        'feature_importance': feature_importance}
+    results = {'train_acc': train_acc,
+               'test_acc': test_acc,
+               'balanced_acc': test_bal_acc,
+               'precision': precision,
+               'recall': recall,
+               'f1': f1,
+               'gap': gap,
+               'confusion_matrix': cm,
+               'feature_importance': feature_importance}
 
     if feature_importance is not None:
         print(f"\n  Top 5 Most Important Features:")
@@ -844,9 +828,9 @@ def evaluate_model_generic(model, X_train, X_test, y_train, y_test, model_name="
             feat = feature_importance.iloc[i]
             if 'Coefficient' in feat:
                 direction = "UP" if feat['Coefficient'] > 0 else "DOWN"
-                print(f"   {i+1:2d}. {feat['Feature']:30s}: {feat['Coefficient']:+.4f} (predicts {direction})")
+                print(f"{i+1:2d}. {feat['Feature']:30s}: {feat['Coefficient']:+.4f} (predicts {direction})")
             else:
-                print(f"   {i+1:2d}. {feat['Feature']:30s}: {feat['Importance']:.4f}")
+                print(f"{i+1:2d}. {feat['Feature']:30s}: {feat['Importance']:.4f}")
 
     return results
 
@@ -869,10 +853,10 @@ def train_model_generic(model, X_train, y_train, X_test, y_test, model_name="Mod
     print(f"{'='*80}")
 
     # To perform cross-validation on the model.
-    cv_scores = perform_time_series_cv(model, X_train, y_train, model_name)
+    cv_scores = perform_time_series_cv(model, X_train, y_train, model_name, 5)
 
     # To train the model on full training set.
-    print(f"\n Training Final Model on Full Training Set...")
+    print(f"\nTraining Final Model on Full Training Set...")
     model.fit(X_train, y_train)
     print(f"    {model_name} training complete!")
 
@@ -881,13 +865,13 @@ def train_model_generic(model, X_train, y_train, X_test, y_test, model_name="Mod
 
     # To print the model performance summary.
     print(f"\n{model_name.upper()} SUMMARY")
-    print(f"{'='*80}")
-    print(f"    Test Accuracy:        {results['test_acc']:.4f}")
-    print(f"    Balanced Accuracy:    {results['balanced_acc']:.4f}")
-    print(f"    F1 Score:             {results['f1']:.4f}")
-    print(f"    Precision:            {results['precision']:.4f}")
-    print(f"    Recall:               {results['recall']:.4f}")
-    print(f"    Overfitting Gap:      {results['gap']:.4f}")
+    print(f"{'='*30}")
+    print(f"Test Accuracy:     {results['test_acc']:.4f}")
+    print(f"Balanced Accuracy: {results['balanced_acc']:.4f}")
+    print(f"F1 Score:          {results['f1']:.4f}")
+    print(f"Precision:         {results['precision']:.4f}")
+    print(f"Recall:            {results['recall']:.4f}")
+    print(f"Overfitting Gap:   {results['gap']:.4f}")
 
     return model, cv_scores, results
 
@@ -959,18 +943,18 @@ def tune_logistic_regression(X_train, y_train, X_test, y_test):
     print(f"Tuning Logistic Regression...")
     grid_search.fit(X_train, y_train)
 
-    # To get best model and ALL parameters.
+    # To get best model and all parameters.
     best_model = grid_search.best_estimator_
     best_params = grid_search.best_params_
 
     print(f"Best Parameters Found:")
-    print(f"  C: {best_params.get('C')}")
-    print(f"  penalty: {best_params.get('penalty')}")
-    print(f"  max_iter: {best_params.get('max_iter')}")
-    print(f"  fit_intercept: {best_params.get('fit_intercept')}")
-    print(f"  class_weight: {best_params.get('class_weight')}")
-    print(f"  random_state: {best_params.get('random_state')}")
-    print(f"  solver: {best_params.get('solver')}")
+    print(f"C: {best_params.get('C')}")
+    print(f"penalty: {best_params.get('penalty')}")
+    print(f"max_iter: {best_params.get('max_iter')}")
+    print(f"fit_intercept: {best_params.get('fit_intercept')}")
+    print(f"class_weight: {best_params.get('class_weight')}")
+    print(f"random_state: {best_params.get('random_state')}")
+    print(f"solver: {best_params.get('solver')}")
     print(f"Best CV Score: {grid_search.best_score_:.4f}")
 
     # To use the generic training pipeline with tuned model.
@@ -1052,18 +1036,18 @@ def tune_ridge_classifier(X_train, y_train, X_test, y_test):
     print(f"Tuning Ridge Classifier...")
     grid_search.fit(X_train, y_train)
 
-    # To get best model and ALL parameters.
+    # To get best model and all parameters.
     best_model = grid_search.best_estimator_
     best_params = grid_search.best_params_
 
     print(f"Best Parameters Found:")
-    print(f"  alpha: {best_params.get('alpha')}")
-    print(f"  solver: {best_params.get('solver')}")
-    print(f"  fit_intercept: {best_params.get('fit_intercept')}")
-    print(f"  copy_X: {best_params.get('copy_X')}")
-    print(f"  class_weight: {best_params.get('class_weight')}")
-    print(f"  random_state: {best_params.get('random_state')}")
-    print(f"  Best CV Score: {grid_search.best_score_:.4f}")
+    print(f"alpha: {best_params.get('alpha')}")
+    print(f"solver: {best_params.get('solver')}")
+    print(f"fit_intercept: {best_params.get('fit_intercept')}")
+    print(f"copy_X: {best_params.get('copy_X')}")
+    print(f"class_weight: {best_params.get('class_weight')}")
+    print(f"random_state: {best_params.get('random_state')}")
+    print(f"Best CV Score: {grid_search.best_score_:.4f}")
 
     # To use the generic training pipeline with tuned model.
     model, cv_scores, results = train_model_generic(best_model, X_train, y_train,
@@ -1128,7 +1112,7 @@ def tune_random_forest(X_train, y_train, X_test, y_test):
 
     # To define the parameter grid for key Random Forest parameters.
     param_grid = {'n_estimators': [100, 200, 300],
-                  'max_depth': [3, 4, 5],
+                  'max_depth': [3, 5, 7],
                   'min_samples_split': [5, 10, 15],
                   'min_samples_leaf': [2, 3, 4],
                   'max_features': [0.2],
@@ -1151,17 +1135,17 @@ def tune_random_forest(X_train, y_train, X_test, y_test):
     print(f"Tuning Random Forest...")
     grid_search.fit(X_train, y_train)
 
-    # To get best model and ALL parameters.
+    # To get best model and all parameters.
     best_model = grid_search.best_estimator_
     best_params = grid_search.best_params_
 
     print(f"Best Parameters Found:")
-    print(f"  n_estimators: {best_params.get('n_estimators')}")
-    print(f"  max_depth: {best_params.get('max_depth')}")
-    print(f"  min_samples_split: {best_params.get('min_samples_split')}")
-    print(f"  min_samples_leaf: {best_params.get('min_samples_leaf')}")
-    print(f"  max_features: {best_params.get('max_features')}")
-    print(f"  class_weight: {best_params.get('class_weight')}")
+    print(f"n_estimators: {best_params.get('n_estimators')}")
+    print(f"max_depth: {best_params.get('max_depth')}")
+    print(f"min_samples_split: {best_params.get('min_samples_split')}")
+    print(f"min_samples_leaf: {best_params.get('min_samples_leaf')}")
+    print(f"max_features: {best_params.get('max_features')}")
+    print(f"class_weight: {best_params.get('class_weight')}")
     print(f"Best CV Score: {grid_search.best_score_:.4f}")
 
     # To use the generic training pipeline with tuned model.
@@ -1175,26 +1159,24 @@ results_dict['Random Forest'] = {'model': rf_model,
                                  'cv_scores': rf_cv,
                                  'results': rf_results}
 
-# Step-4 : *Analysis.*
+"""# Step-4 : *Analysis.*"""
 
 def analyze_and_compare_models(df):
 
     """
     This function helps to analyze and compare the performance of all trained models.
-    
+
     Parameters: df : Dictionary containing model results.
-    Returns: best_model_name : Name of the best performing model.
-             best_model_data : Data for the best model.
-             comparison_df : DataFrame with detailed comparison.
+    Returns: comparison_df : DataFrame with detailed comparison.
     """
-    
+
     # To extract performance metrics.
     comparison_data = []
-    
+
     for model_name, model_data in df.items():
         results = model_data['results']
         cv_scores = model_data['cv_scores']
-        
+
         comparison_data.append({'Model': model_name,
                                 'Test Accuracy': results['test_acc'],
                                 'CV Val Accuracy': cv_scores['val_acc'],
@@ -1204,27 +1186,21 @@ def analyze_and_compare_models(df):
                                 'Recall': results['recall'],
                                 'Overfitting Gap': results['gap'],
                                 'CV Train-Val Gap': cv_scores['gap']})
-    
+
     # To create comparison dataframe.
     comparison_df = pd.DataFrame(comparison_data)
-    
+
     # To sort the dataframe by balanced accuracy.
     comparison_df = comparison_df.sort_values('Balanced Accuracy', ascending=False)
-    
+
     print(f"\nMODEL COMPARISON (Sorted by Balanced Accuracy):")
     print("-" * 135)
     print(comparison_df.to_string(index=False, float_format=lambda x: f"{x:.4f}"))
-    
-    # To get the first best model.
-    best_model_name = comparison_df.iloc[0]['Model']
-    best_model_data = results_dict[best_model_name]
-    
-    print(f"\nBEST MODEL: {best_model_name}")
-       
-    return best_model_name, best_model_data, comparison_df
+
+    return comparison_df
 
 # To analyze the results.
-best_model_name, best_model_data, comparison_df = analyze_and_compare_models(results_dict)
+comparison_df = analyze_and_compare_models(results_dict)
 
 def create_summary_chart(df):
 
@@ -1238,27 +1214,27 @@ def create_summary_chart(df):
     # To create two subplots, one for model's performance acoording to different
     # metrics and other for model's traning-validation and training-testing gap.
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-    
+
     # To define the metrics to plot (first subplot).
     metrics = ['Test Accuracy', 'Balanced Accuracy', 'F1 Score', 'Precision', 'Recall']
     model_names = df['Model'].values
     x = np.arange(len(model_names))
     width = 0.15
-    
+
     # To assign colors for each metric.
     colors = ['blue', 'green', 'red', 'orange', 'purple']
-    
+
     for i, (metric, color) in enumerate(zip(metrics, colors)):
         offset = (i - 2) * width
         values = df[metric].values
         bars = ax1.bar(x + offset, values, width, label=metric, color=color)
-        
+
         # To add value labels on top of each bar.
         for bar, value in zip(bars, values):
             height = bar.get_height()
             ax1.text(bar.get_x() + bar.get_width()/2., height + 0.01,
                     f'{value:.3f}', ha='center', va='bottom', fontsize=8)
-    
+
     # To configure the first subplot.
     ax1.set_ylabel('Score', fontsize=12)
     ax1.set_title('(a) Model Performance Metrics', fontsize=13, fontweight='bold')
@@ -1266,17 +1242,23 @@ def create_summary_chart(df):
     ax1.set_xticklabels(model_names, rotation=0, fontsize=11)
     ax1.set_ylim(0, 1)
     ax1.grid(True, axis='y', alpha=0.3)
-    
+
     # To create the second subplot for overfitting analysis.
     gap_data = [df['Overfitting Gap'].values,
                 df['CV Train-Val Gap'].values]
     gap_labels = ['Test-Train Gap', 'CV Train-Val Gap']
     gap_colors = ['red', 'blue']
-    
+
     x2 = np.arange(len(model_names))
     for i, (data, label, color) in enumerate(zip(gap_data, gap_labels, gap_colors)):
-        ax2.bar(x2 + i*0.3, data, width=0.3, label=label, alpha=0.7, color=color)
-    
+        values2 = data
+        bars2 = ax2.bar(x2 + i*0.3, data, width=0.3, label=label, alpha=0.7, color=color)
+
+        for bar2, value2 in zip(bars2, data):
+            height2 = bar2.get_height()
+            ax2.text(bar2.get_x() + bar2.get_width()/2., height2 + 0.001,
+                    f'{value2:.3f}', ha='center', va='bottom', fontsize=8)
+
     # To add a horizontal line at zero for reference.
     ax2.axhline(y=0, color='black', linestyle='-', alpha=0.3)
     ax2.set_ylabel('Gap Value', fontsize=12)
@@ -1284,16 +1266,16 @@ def create_summary_chart(df):
     ax2.set_xticks(x2 + 0.15)
     ax2.set_xticklabels(model_names, rotation=0, fontsize=11)
     ax2.grid(True, axis='y', alpha=0.3)
-    
+
     # To create one comprehensive legend at the top of the figure.
     # To get all legend items from both subplots.
     handles1, labels1 = ax1.get_legend_handles_labels()
     handles2, labels2 = ax2.get_legend_handles_labels()
-    
+
     # To combine all handles and labels.
     all_handles = handles1 + handles2
     all_labels = labels1 + labels2
-    
+
     # To create single legend at the very top of the figure.
     fig.legend(all_handles, all_labels,
                loc='lower center',
@@ -1303,16 +1285,17 @@ def create_summary_chart(df):
                frameon=True,
                fancybox=True,
                shadow=False)
-    
+
     # To add main title below the legend.
-    plt.suptitle('Gold Price Weekly Direction Forecasting: Model Evaluation', 
+    plt.suptitle('Gold Price Weekly Direction Forecasting: Model Evaluation',
                  fontsize=16, fontweight='bold', y=1.02)
-    
+
     plt.tight_layout()
-    
+
     # To adjust layout to make room for the top legend.
     plt.subplots_adjust(bottom=0.1)
-    
+    save_plot("model_evaluation")
+
     return fig
 
 # Call the function:
@@ -1332,30 +1315,30 @@ def plot_feature_importance(df, features):
 
     # To create a figure with three subplots, one for each model.
     fig, axes = plt.subplots(3, 1, figsize=(14, 16))
-    fig.suptitle('Top 10 Most Important Features for Each Model\n(Gold Price Weekly Direction Prediction)', 
+    fig.suptitle('Top 10 Most Important Features for Each Model\n(Gold Price Weekly Direction Prediction)',
                  fontsize=16, fontweight='bold', y=1.02)
-    
+
     # To define which models to plot.
     models_to_plot = ['Logistic Regression', 'Ridge Classifier', 'Random Forest']
-    
+
     # To use the same color for all bars (makes comparison easier).
     bar_color = 'steelblue'
-    
+
     # To iterate through each model and create its feature importance plot.
     for idx, model_name in enumerate(models_to_plot):
         ax = axes[idx]
-        
+
         # To check if the model exists in the results dictionary.
         if model_name in df:
             model_data = df[model_name]['results']
-            
+
             # To check if feature importance data is available for this model.
             if 'feature_importance' in model_data and model_data['feature_importance'] is not None:
                 feat_imp = model_data['feature_importance']
-                
+
                 # To extract top 10 most important features.
                 top_features = feat_imp.head(10).copy()
-                
+
                 # To get importance values.
                 # For linear models, use absolute coefficient values.
                 if 'Abs_Coefficient' in feat_imp.columns:
@@ -1365,27 +1348,27 @@ def plot_feature_importance(df, features):
                     # For Random Forest, use importance scores.
                     importance_values = top_features['Importance'].values
                     score_type = 'Importance Score'
-                
+
                 # To create horizontal bars.
-                bars = ax.barh(range(len(top_features)), 
-                              importance_values,
-                              color=bar_color, alpha=0.8)
-                                
+                bars = ax.barh(range(len(top_features)), importance_values,
+                               color=bar_color, alpha=0.8)
+
                 # To configure the y-axis with feature names.
                 ax.set_yticks(range(len(top_features)))
                 ax.set_yticklabels(top_features['Feature'].tolist(), fontsize=10)
                 ax.invert_yaxis()  # To display highest importance at the top.
-                
+
                 # To set x-axis label.
                 ax.set_xlabel(score_type, fontsize=11)
-                
+
                 # To add title for this subplot.
                 ax.set_title(f'{model_name}', fontsize=13, fontweight='bold', pad=10)
-                
+
                 # To add grid lines for better readability.
                 ax.grid(True, axis='x', alpha=0.3, linestyle='--')
-    
+
     plt.tight_layout()
+    save_plot("feature_importance")
     return fig
 
 # To call the function after model training.
