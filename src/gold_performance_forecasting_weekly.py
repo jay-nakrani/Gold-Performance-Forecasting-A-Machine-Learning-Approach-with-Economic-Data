@@ -1371,6 +1371,6 @@ def plot_feature_importance(df, features):
     save_plot("feature_importance")
     return fig
 
-# To call the function after model training.
+# To call the function.
 fig = plot_feature_importance(results_dict, friday_features)
 plt.show()
